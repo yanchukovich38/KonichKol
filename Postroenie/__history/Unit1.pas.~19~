@@ -1,0 +1,407 @@
+unit Unit1;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, SldWorks_TLB, SwConst_TLB,
+  ComObj, Common_Unit, math, Vcl.Imaging.jpeg, Vcl.ExtCtrls;
+
+type
+  Wheels = array of array of Double;
+
+  TForm1 = class(TForm)
+    Button1: TButton;
+    Edit1: TEdit;
+    Edit2: TEdit;
+    Edit3: TEdit;
+    Edit4: TEdit;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
+    Label4: TLabel;
+    Edit5: TEdit;
+    Edit6: TEdit;
+    Edit7: TEdit;
+    Edit8: TEdit;
+    Label5: TLabel;
+    Label6: TLabel;
+    Label7: TLabel;
+    Label8: TLabel;
+    procedure Button1Click(Sender: TObject);
+    procedure Edit1KeyPress(Sender: TObject; var Key: Char);
+    procedure Edit2KeyPress(Sender: TObject; var Key: Char);
+    procedure Edit3KeyPress(Sender: TObject; var Key: Char);
+    procedure Edit4KeyPress(Sender: TObject; var Key: Char);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  ma: Wheels;
+  A1: OleVariant;
+  qwerty: array of Double;
+  wheel1color, wheel2color, foncolor: TColor;
+  x0, y0, delx, dely: integer;
+  mashtab: integer;
+  koleso, koleso1, koleso0, koleso10: Wheels;
+  I, z1, z2: integer;
+  m, alfa, x: extended;
+  J: integer;
+  bit: TBitmap;
+  ugol: integer;
+  h: extended;
+  eps: extended;
+  r: extended;
+  rb: extended;
+  ra: extended;
+  rf: extended;
+  a: extended;
+  ro: extended;
+  t00: extended;
+  t01: extended;
+  t02: extended;
+  t03: extended;
+  t04: extended;
+  t05: extended;
+  S1: extended;
+  S2: extended;
+  S3: extended;
+  S4: extended;
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+function d(t1, m, alfa: extended): extended;
+begin
+  Result := r * t1 - Pi * m / 4;
+end;
+
+function p(t1, m, alfa: extended): extended;
+begin
+  Result := d(t1, m, alfa) * Cos(DegToRad(alfa)) + eps * Sin(DegToRad(alfa));
+end;
+
+function b(t2, m, alfa: extended): extended;
+begin
+  Result := r * t2 - Pi * m / 4 + h * Tan(DegToRad(alfa)) + ro *
+    (1 - Sin(DegToRad(alfa))) / Cos(DegToRad(alfa));
+end;
+
+function b1(t2, m, alfa: extended): extended;
+begin
+  Result := Sqrt(Sqr(a) + Sqr(b(t2, m, alfa)));
+end;
+
+function xe(t1, m, alfa: extended): extended;
+begin
+  Result := r * Sin(t1) - p(t1, m, alfa) * Cos(t1 + DegToRad(alfa));
+end;
+
+function ye(t1, m, alfa: extended): extended;
+begin
+  Result := r * Cos(t1) + p(t1, m, alfa) * Sin(t1 + DegToRad(alfa));
+end;
+
+function xv(t2, m, alfa: extended): extended;
+begin
+  Result := r * Sin(t2) + ((1 + ro / b1(t2, m, alfa)) * (a * Sin(t2) - b(t2, m,
+    alfa) * Cos(t2)));
+end;
+
+function yv(t2, m, alfa: extended): extended;
+begin
+  Result := r * Cos(t2) + ((1 + ro / b1(t2, m, alfa)) * (a * Cos(t2) + b(t2, m,
+    alfa) * Sin(t2)));
+end;
+
+function formuls(m, alfa, x: extended; z: integer): Wheels;
+var
+  count: integer;
+  t1, t2: extended;
+  masx, masy, masx0, masy0, masx1, masy1, masx10, masy10: array of extended;
+  masx2, masy2, masx22, masy22: array of array of extended;
+  MasPolygon: Wheels;
+  I: integer;
+  J, c: integer;
+  Mas: Wheels;
+begin // процедура расчета контура колеса
+  count := 0;
+  eps := x * m;
+  h := 1.25 * m;
+  r := z * m / 2;
+  ro := 0.38 * m;
+  rb := r * Cos(DegToRad(alfa));
+  rf := r - h + eps;
+  ra := r + m + eps;
+  a := eps - h + ro;
+  t00 := (Pi * m / 4 - (r + eps) * Tan(DegToRad(alfa))) / r;
+  t01 := (Pi * m / 4 - h * Tan(DegToRad(alfa)) - ro * (1 - Sin(DegToRad(alfa)))
+    / Cos(DegToRad(alfa))) / r;
+  t02 := (Pi * m / 4 - (h - eps * Sqr(Cos(DegToRad(alfa))) - ro *
+    (1 - Sin(DegToRad(alfa)))) / (Cos(DegToRad(alfa)) *
+    Sin(DegToRad(alfa)))) / r;
+  t03 := (Pi * m / 4 - (r - eps) * Tan(DegToRad(alfa)) +
+    Sqrt(Sqr(ra) - Sqr(r) * Sqr(Cos(DegToRad(alfa)))) /
+    Cos(DegToRad(alfa))) / r;
+  t04 := a * Sin(xe(t03, m, alfa) / ra);
+  t05 := 2 * Pi / 2 - t04;
+  S1 := 2 * t01 / 10;
+  S2 := (t05 - t04) / 10;
+  S3 := (t01 - t02) / 10;
+  S4 := (t03 - t02) / 10;
+
+  t1 := t02;
+  t2 := t02;
+
+  while t1 < (t03 + 0.001) do
+  begin
+    SetLength(masx, count + 1);
+    SetLength(masy, count + 1);
+    masx[count] := xe(t1, m, alfa);
+    masy[count] := ye(t1, m, alfa);
+    count := count + 1;
+    t1 := t1 + S4;
+  end;
+  count := 0;
+  while t2 < (t01 + 0.001) do
+  begin
+    SetLength(masx1, count + 1);
+    SetLength(masy1, count + 1);
+    masx1[count] := xv(t2, m, alfa);
+    masy1[count] := yv(t2, m, alfa);
+    count := count + 1;
+    t2 := t2 + S3;
+  end;
+
+  SetLength(masx2, length(masy), z);
+  SetLength(masy2, length(masy), z);
+  SetLength(masx22, length(masy), z);
+  SetLength(masy22, length(masy), z);
+  SetLength(masx10, length(masx1));
+  SetLength(masy10, length(masx1));
+  SetLength(Mas, length(masy) + length(masy) + length(masx1) +
+    length(masx1), 2);
+  for I := 0 to z - 1 do
+  begin
+    count := 0;
+    for J := length(masx2) - 1 downto 0 do
+    begin
+      masx2[J, I] := masx[J] * Cos(DegToRad((360 / z) * I)) - masy[J] *
+        Sin(DegToRad((360 / z) * I));
+      masy2[J, I] := masx[J] * Sin(DegToRad((360 / z) * I)) + masy[J] *
+        Cos(DegToRad((360 / z) * I));
+      Mas[count, 0] := masx2[J, I];
+      Mas[count, 1] := masy2[J, I];
+      count := count + 1;
+    end;
+    for J := 0 to length(masx10) - 1 do
+    begin
+      masx10[J] := masx1[J] * Cos(DegToRad((360 / z) * I)) - masy1[J] *
+        Sin(DegToRad((360 / z) * I));
+      masy10[J] := masx1[J] * Sin(DegToRad((360 / z) * I)) + masy1[J] *
+        Cos(DegToRad((360 / z) * I));
+      Mas[count, 0] := masx10[J];
+      Mas[count, 1] := masy10[J];
+      count := count + 1;
+    end;
+    for J := length(masx10) - 1 downto 0 do
+    begin
+      masx10[J] := -masx1[J] * Cos(DegToRad((360 / z) * I)) - masy1[J] *
+        Sin(DegToRad((360 / z) * I));
+      masy10[J] := -masx1[J] * Sin(DegToRad((360 / z) * I)) + masy1[J] *
+        Cos(DegToRad((360 / z) * I));
+      Mas[count, 0] := masx10[J];
+      Mas[count, 1] := masy10[J];
+      count := count + 1;
+    end;
+    for J := 0 to length(masx2) - 1 do
+    begin
+      masx22[J, I] := -masx[J] * Cos(DegToRad((360 / z) * I)) - masy[J] *
+        Sin(DegToRad((360 / z) * I));
+      masy22[J, I] := -masx[J] * Sin(DegToRad((360 / z) * I)) + masy[J] *
+        Cos(DegToRad((360 / z) * I));
+      Mas[count, 0] := masx22[J, I];
+      Mas[count, 1] := masy22[J, I];
+      count := count + 1;
+    end;
+  end;
+  Result := Mas;
+end;
+
+procedure DrawKol(m, x: extended; z: integer);
+var
+  e: integer;
+  dv, d1, d2, b, teta, ha: extended;
+  SW: ISldWorks;
+  ID: IDispatch;
+  MD: IModelDoc2;
+  CP: ISketchPoint;
+  Points: array [0 .. 40] of ISketchPoint;
+  Lines: array [0 .. 30] of ISketchSegment;
+  SelMgr: ISelectionMgr;
+begin
+  dv := 20 / 1000;
+  d1 := 50 / 1000;
+  d2 := 80 / 1000;
+  b := 10 / 1000;
+  ha := 2 / 1000;
+  teta := DegToRad(4);
+  SW := CreateOleObject('SldWorks.Application') as ISldWorks;
+  if SW = nil then
+    hr := E_OutOfMemory;
+  If SW.Visible = false then
+    SW.Visible := true;
+  ID := SW.NewDocument
+    ('C:\ProgramData\SolidWorks\SOLIDWORKS 2016\templates\gost-part.prtdot', 0,
+    0, 0);
+  ID := SW.ActivateDoc2('Деталь1', false, e);
+  ID := SW.ActiveDoc;
+  MD := SW.NewPart as IModelDoc2;
+  SelMgr := MD.ISelectionManager;
+  if MD.SelectByID('', 'EXTSKETCHPOINT', 0, 0, 0) then
+    CP := SelMgr.IGetSelectedObject(1) as ISketchPoint;
+  MD.InsertSketch;
+  MD.CreateCenterLineVB(0, 0, 0, 2 * d1, 0, 0);
+   MD.CreateCenterLineVB(0,0,0,d1/2,d2/2,0);
+  Lines[0] := MD.ICreateLine2(d1 / 2 - b / 2, dv / 2, 0, d1 / 2 + b / 2,
+    dv / 2, 0);
+  Points[0] := (Lines[0] as ISketchline).GetStartPoint2 as ISketchPoint; //Первый эскиз
+  Points[1] := (Lines[0] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[1] := MD.ICreateLine2(d1 / 2 + b / 2, dv / 2, 0,
+    d1 / 2 + b / 2 + b / 3, dv / 2, 0);
+  Points[2] := (Lines[1] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[3] := (Lines[1] as ISketchline).GetEndPoint2 as ISketchPoint;
+  Points[1].Select(true);
+  Points[2].Select(true);
+  MD.SketchAddConstraints('sgMERGEPOINTS');
+  MD.ClearSelection;
+  Lines[2] := MD.ICreateLine2(d1 / 2 + b / 2 + b / 3, dv / 2, 0,
+    d1 / 2 + b / 2 + b / 3, d2 / 6, 0);
+  Points[4] := (Lines[2] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[5] := (Lines[2] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[3] := MD.ICreateLine2(d1 / 2 + b / 2 + b / 3, d2 / 6, 0,
+    d1 / 2 + b / 2, d2 / 6, 0);
+  Points[6] := (Lines[3] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[7] := (Lines[3] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[4] := MD.ICreateLine2(d1 / 2 + b / 2, d2 / 6, 0, d1 / 2 + b / 2,
+    d2 / 2 - 2 * ha, 0);
+  Points[8] := (Lines[4] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[9] := (Lines[4] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Points[1].Select(true);
+  Points[2].Select(true);
+  MD.SketchAddConstraints('sgMERGEPOINTS');
+  MD.ClearSelection;
+  Lines[5] := MD.ICreateLine2(d1 / 2 + b / 2, d2 / 2 - 2 * ha, 0,
+    d1 / 2 + b / 2 - 3 * ha, d2 / 2 + ha, 0);
+  Points[10] := (Lines[5] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[11] := (Lines[5] as ISketchline).GetEndPoint2 as ISketchPoint;
+  Lines[6] := MD.ICreateLine2(d1 / 2 + b / 2 - 3 * ha, d2 / 2 + ha, 0,
+    d1 / 2 + b / 2 - 3 * ha - b, d2 / 2 + ha - b, 0);
+  Points[12] := (Lines[6] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[13] := (Lines[6] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[7] := MD.ICreateLine2(d1 / 2 + b / 2 - 3 * ha - b, d2 / 2 + ha - b, 0,
+    d1 / 2 - b / 2, d2 / 2 - 2 * ha - b, 0);
+  Points[14] := (Lines[7] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[15] := (Lines[7] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[8] := MD.ICreateLine2(d1 / 2 - b / 2, d2 / 2 - 2 * ha - b, 0,
+    d1 / 2 - b / 2, d2 / 6, 0);
+  Points[16] := (Lines[8] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[17] := (Lines[8] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[9] := MD.ICreateLine2(d1 / 2 - b / 2 - b / 3, dv / 2, 0,
+    d1 / 2 - b / 2, dv / 2, 0);
+  Points[18] := (Lines[9] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[19] := (Lines[9] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[10] := MD.ICreateLine2(d1 / 2 - b / 2 - b / 3, dv / 2, 0,
+    d1 / 2 - b / 2 - b / 3, d2 / 6, 0);
+  Points[20] := (Lines[10] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[21] := (Lines[10] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Lines[11] := MD.ICreateLine2(d1 / 2 - b / 2 - b / 3, d2 / 6, 0,
+    d1 / 2 - b / 2, d2 / 6, 0);
+  Points[22] := (Lines[11] as ISketchline).GetStartPoint2 as ISketchPoint;
+  Points[23] := (Lines[11] as ISketchline).GetEndPoint2 as ISketchPoint;
+  MD.ClearSelection;
+  Points[0].Select(true);
+  Points[19].Select(true);
+  MD.SketchAddConstraints('sgMERGEPOINTS');
+  MD.ClearSelection;
+  MD.Extension.SelectByID2('Line1', 'SKETCHSEGMENT', -8.89882389669765E-02,
+    2.65954051549784E-02, 0, false, 16, nil, 0);
+  MD.Extension.SelectByID2('Эскиз1', 'SKETCHREGION', 0.024174996489474,
+    2.92325502248317E-02, 8.65647245655209E-03, true, 0, nil, 0);
+  MD.FeatureManager.FeatureRevolve2(true, true, false, false, false, false, 0,
+    0, 6.2831853071796, 0, false, false, 0.01, 0.01, 0, 0, 0, true, true, true);
+  MD.ClearSelection;
+  MD.Extension.SelectByID2('Сверху', 'PLANE', 0, 0, 0, True, 0, nil, 0);
+  MD.Extension.SelectByID2('', 'FACE', 2.72118950825302E-02, 3.85276258963643E-02, 4.48766374427123E-03, True, 1, nil, 0);
+  MD.FeatureManager.InsertRefPlane(2, 0, 32, 0, 0, 0);
+  MD.InsertSketch;
+  MD.CreateCenterLineVB(0,0,0,d1,0,0);                   //второй эскиз
+  Lines[12] := MD.ICreateLine2(d2/2,0,0,d2/2,0.4*m,0);
+//  Lines[13] := MD.ICreateLine2()
+end;
+
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  z: integer;
+  m, b, x: extended;
+begin
+  m := StrToFloat(Edit2.Text)/1000; // модуль
+  b := StrToFloat(Edit3.Text); //
+  x := StrToFloat(Edit4.Text); //
+  z := StrToInt(Edit1.Text); //
+  ma := formuls(m, 20, x, z);
+  SetLength(qwerty, length(ma) * 3);
+  for I := 0 to length(ma) - 1 do
+  begin
+    qwerty[I * 3] := ma[I, 0];
+    qwerty[I * 3 + 1] := ma[I, 1];
+    qwerty[I * 3 + 2] := 0;
+  end;
+  A1 := VarArrayCreate([0, length(qwerty) - 1], varDouble);
+  for I := 0 to length(qwerty) - 1 do
+  begin
+    A1[I] := qwerty[I] / 1000;
+  end;
+  DrawKol(m, x, z);
+end;
+
+procedure TForm1.Edit1KeyPress(Sender: TObject; var Key: Char);
+begin
+  if not(Key in ['0' .. '9', formatSettings.DecimalSeparator, '-', #8]) then
+    Key := #0;
+end;
+
+procedure TForm1.Edit2KeyPress(Sender: TObject; var Key: Char);
+begin
+  if not(Key in ['0' .. '9', formatSettings.DecimalSeparator, '-', #8]) then
+    Key := #0;
+end;
+
+procedure TForm1.Edit3KeyPress(Sender: TObject; var Key: Char);
+begin
+  if not(Key in ['0' .. '9', formatSettings.DecimalSeparator, '-', #8]) then
+    Key := #0;
+end;
+
+procedure TForm1.Edit4KeyPress(Sender: TObject; var Key: Char);
+begin
+  if not(Key in ['0' .. '9', formatSettings.DecimalSeparator, '-', #8]) then
+    Key := #0;
+end;
+
+end.
